@@ -24,7 +24,7 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  double _value = 0.0;
+  double _value = 99.99;
 
   @override
   Widget build(BuildContext context) {
@@ -62,12 +62,14 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
             AnimatedFlipCounter(
               value: _value,
-              duration: const Duration(seconds: 1),
+              duration: const Duration(milliseconds: 5000),
               padding: const EdgeInsets.all(8),
               curve: Curves.elasticOut,
               wholeDigits: 4,
               fractionDigits: 2,
+              hideFractionOnRoundValue: true,
               hideLeadingZeroes: true,
+              animateVisible: true,
               thousandSeparator: ',',
               textStyle: const TextStyle(fontSize: 32, color: Colors.purple),
             ),
@@ -77,6 +79,8 @@ class _MyHomePageState extends State<MyHomePage> {
               curve: Curves.bounceOut,
               wholeDigits: 4,
               fractionDigits: 2,
+              hideFractionOnRoundValue: true,
+              animateVisible: true,
               thousandSeparator: ',',
               textStyle: const TextStyle(fontSize: 32, color: Colors.blue),
             ),
@@ -88,6 +92,7 @@ class _MyHomePageState extends State<MyHomePage> {
               wholeDigits: 8,
               hideLeadingZeroes: true,
               // Some languages like French use comma as decimal separator
+              animateVisible: true,
               decimalSeparator: ',',
               thousandSeparator: '.',
               padding: const EdgeInsets.all(8),

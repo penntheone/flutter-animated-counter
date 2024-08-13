@@ -78,6 +78,14 @@ class AnimatedFlipCounter extends StatelessWidget {
   /// animating back from 35 to 35.27, but nothing is visible to the user on hide.
   final bool hideFractionOnRoundValue;
 
+  /// Whether to animate digits coming in and out of [_SingleDigitFlipCounter.visible],
+  /// applicable to [hideFractionOnRoundValue] and [hideLeadingZeroes].
+  ///
+  /// Adding this tag can have performance cost, as it will nest two [TweenAnimationBuilder]s
+  /// into each other. For rapidly changing data, it's advisable that this tag retains false;
+  /// the extra digits will still appear correctly, but without animation.
+  final bool animateVisible;
+
   /// Insert a symbol between every 3 digits, for example: 1,000,000.
   ///
   /// Typical symbol is either a comma or a period, based on locale. Default
@@ -113,6 +121,7 @@ class AnimatedFlipCounter extends StatelessWidget {
     this.wholeDigits = 1,
     this.hideLeadingZeroes = false,
     this.hideFractionOnRoundValue = false,
+    this.animateVisible = false,
     this.thousandSeparator,
     this.decimalSeparator = '.',
     this.mainAxisAlignment = MainAxisAlignment.center,
@@ -180,9 +189,8 @@ class AnimatedFlipCounter extends StatelessWidget {
         // split into [0, 5, 50, 500]. Since 50 and 500 are not 0, they are
         // always visible. But we should not show 0.48 as .48 so the last
         // zero before decimal point is always visible.
-        visible: hideLeadingZeroes
-            ? digits[i] != 0 || i == digits.length - fractionDigits - 1
-            : true,
+        visible: hideLeadingZeroes ? digits[i] != 0 || i == digits.length - fractionDigits - 1 : true,
+        animateVisible: animateVisible,
       );
       integerWidgets.add(digit);
     }
@@ -243,16 +251,21 @@ class AnimatedFlipCounter extends StatelessWidget {
           ...integerWidgets,
           // Draw the decimal point
 
-          if (fractionDigits != 0) ClipRect(
-            child: TweenAnimationBuilder(
-              duration: negativeSignDuration,
-              tween: Tween(end: !hideFraction ? 1.0 : 0.0),
-              builder: (_, double v, __) => Center(
-                widthFactor: v,
-                child: Text(decimalSeparator),
-              ),
-            ),
-          ),
+          if (fractionDigits != 0) ...[
+            if (animateVisible)
+              ClipRect(
+                child: TweenAnimationBuilder(
+                  duration: negativeSignDuration,
+                  tween: Tween(end: !hideFraction ? 1.0 : 0.0),
+                  builder: (_, double v, __) => Center(
+                    widthFactor: v,
+                    child: Text(decimalSeparator),
+                  ),
+                ),
+              )
+            else if (!hideFraction)
+              Text(decimalSeparator),
+          ],
 
           // Draw digits after the decimal point
           for (int i = digits.length - fractionDigits; i < digits.length; i++)
@@ -265,6 +278,7 @@ class AnimatedFlipCounter extends StatelessWidget {
               color: color,
               padding: padding,
               visible: !hideFraction,
+              animateVisible: animateVisible,
             ),
           if (suffix != null) Text(suffix!),
         ],
@@ -280,7 +294,8 @@ class _SingleDigitFlipCounter extends StatelessWidget {
   final Size size;
   final Color color;
   final EdgeInsets padding;
-  final bool visible; // user can choose to hide leading zeroes
+  final bool visible; // user can choose to hide elements
+  final bool animateVisible;
 
   const _SingleDigitFlipCounter({
     super.key,
@@ -291,6 +306,7 @@ class _SingleDigitFlipCounter extends StatelessWidget {
     required this.color,
     required this.padding,
     this.visible = true,
+    this.animateVisible = false,
   });
 
   @override
@@ -298,43 +314,49 @@ class _SingleDigitFlipCounter extends StatelessWidget {
     final double w = size.width + padding.horizontal;
     final double h = size.height + padding.vertical;
 
-    return ClipRect(
-      child: TweenAnimationBuilder(
-        tween: Tween(end: visible ? w : 0.0),
-        duration: duration,
-        curve: curve,
-        builder: (_, sizeValue, __) {
-          if (sizeValue < 0) sizeValue = 0;
-          return SizedBox(
-            width: sizeValue,
-            height: h,
-            child: TweenAnimationBuilder<double>(
-              tween: Tween(end: value),
-              duration: duration,
-              curve: curve,
-              builder: (_, numberValue, __) {
-                final whole = numberValue ~/ 1;
-                final decimal = numberValue - whole;
-                return Stack(
-                  children: <Widget>[
-                    _buildSingleDigit(
-                      digit: whole % 10,
-                      offset: h * decimal,
-                      opacity: 1 - decimal,
-                    ),
-                    _buildSingleDigit(
-                      digit: (whole + 1) % 10,
-                      offset: h * decimal - h,
-                      opacity: decimal,
-                    ),
-                  ],
-                );
-              },
+    Widget numberAnimationBuilder = TweenAnimationBuilder(
+      tween: Tween(end: value),
+      duration: duration,
+      curve: curve,
+      builder: (_, numberValue, __) {
+        final whole = numberValue ~/ 1;
+        final decimal = numberValue - whole;
+        return Stack(
+          children: <Widget>[
+            _buildSingleDigit(
+              digit: whole % 10,
+              offset: h * decimal,
+              opacity: 1 - decimal,
             ),
-          );
-        }
-      ),
+            _buildSingleDigit(
+              digit: (whole + 1) % 10,
+              offset: h * decimal - h,
+              opacity: decimal,
+            ),
+          ],
+        );
+      },
     );
+
+    if (animateVisible) {
+      return ClipRect(
+        child: TweenAnimationBuilder(
+            tween: Tween(end: visible ? w : 0.0),
+            duration: duration,
+            curve: curve,
+            builder: (_, sizeValue, __) {
+              // Prevent the box from collapsing to negative
+              if (sizeValue < 0) sizeValue = 0;
+              return SizedBox(
+                width: sizeValue,
+                height: h,
+                child: numberAnimationBuilder,
+              );
+            }),
+      );
+    } else {
+      return SizedBox(width: visible ? w : 0.0, height: h, child: numberAnimationBuilder);
+    }
   }
 
   Widget _buildSingleDigit({
