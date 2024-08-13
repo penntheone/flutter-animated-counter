@@ -140,7 +140,7 @@ class AnimatedFlipCounter extends StatelessWidget {
     // `Opacity` and `AnimatedOpacity` widget, for better performance.
     final Color color = style.color ?? const Color(0xffff0000);
 
-    final bool renderFraction = this.value % 1 == 0 && hideFractionOnRoundValue;
+    final bool hideFraction = hideFractionOnRoundValue && (this.value - this.value.round()).abs() < 1e-10;
 
     // Convert the decimal value to int. For example, if we want 2 decimal
     // places, we will convert 5.21 into 521.
@@ -242,7 +242,7 @@ class AnimatedFlipCounter extends StatelessWidget {
           // Draw digits before the decimal point
           ...integerWidgets,
           // Draw the decimal point
-          if (fractionDigits != 0 && !renderFraction) Text(decimalSeparator),
+          if (fractionDigits != 0 && !hideFraction) Text(decimalSeparator),
           // Draw digits after the decimal point
           for (int i = digits.length - fractionDigits; i < digits.length; i++)
             _SingleDigitFlipCounter(
@@ -253,7 +253,7 @@ class AnimatedFlipCounter extends StatelessWidget {
               size: prototypeDigit.size,
               color: color,
               padding: padding,
-              visible: !renderFraction,
+              visible: !hideFraction,
             ),
           if (suffix != null) Text(suffix!),
         ],
