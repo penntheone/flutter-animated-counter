@@ -242,7 +242,18 @@ class AnimatedFlipCounter extends StatelessWidget {
           // Draw digits before the decimal point
           ...integerWidgets,
           // Draw the decimal point
-          if (fractionDigits != 0 && !hideFraction) Text(decimalSeparator),
+
+          if (fractionDigits != 0) ClipRect(
+            child: TweenAnimationBuilder(
+              duration: negativeSignDuration,
+              tween: Tween(end: !hideFraction ? 1.0 : 0.0),
+              builder: (_, double v, __) => Center(
+                widthFactor: v,
+                child: Text(decimalSeparator),
+              ),
+            ),
+          ),
+
           // Draw digits after the decimal point
           for (int i = digits.length - fractionDigits; i < digits.length; i++)
             _SingleDigitFlipCounter(
@@ -284,35 +295,45 @@ class _SingleDigitFlipCounter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TweenAnimationBuilder(
-      tween: Tween(end: value),
-      duration: duration,
-      curve: curve,
-      builder: (_, double value, __) {
-        final whole = value ~/ 1;
-        final decimal = value - whole;
-        final w = size.width + padding.horizontal;
-        final h = size.height + padding.vertical;
+    final double w = size.width + padding.horizontal;
+    final double h = size.height + padding.vertical;
 
-        return SizedBox(
-          width: visible ? w : 0,
-          height: h,
-          child: Stack(
-            children: <Widget>[
-              _buildSingleDigit(
-                digit: whole % 10,
-                offset: h * decimal,
-                opacity: 1 - decimal,
-              ),
-              _buildSingleDigit(
-                digit: (whole + 1) % 10,
-                offset: h * decimal - h,
-                opacity: decimal,
-              ),
-            ],
-          ),
-        );
-      },
+    return ClipRect(
+      child: TweenAnimationBuilder(
+        tween: Tween(end: visible ? w : 0.0),
+        duration: duration,
+        curve: curve,
+        builder: (_, sizeValue, __) {
+          if (sizeValue < 0) sizeValue = 0;
+          return SizedBox(
+            width: sizeValue,
+            height: h,
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(end: value),
+              duration: duration,
+              curve: curve,
+              builder: (_, numberValue, __) {
+                final whole = numberValue ~/ 1;
+                final decimal = numberValue - whole;
+                return Stack(
+                  children: <Widget>[
+                    _buildSingleDigit(
+                      digit: whole % 10,
+                      offset: h * decimal,
+                      opacity: 1 - decimal,
+                    ),
+                    _buildSingleDigit(
+                      digit: (whole + 1) % 10,
+                      offset: h * decimal - h,
+                      opacity: decimal,
+                    ),
+                  ],
+                );
+              },
+            ),
+          );
+        }
+      ),
     );
   }
 
