@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'dart:ui' show FontFeature;
 
 import 'package:flutter/widgets.dart';
 
@@ -17,6 +16,8 @@ class AnimatedFlipCounter extends StatelessWidget {
   /// Animation duration for the negative sign to appear and disappear.
   /// Default value is 150 ms, so it feels snappy.
   final Duration negativeSignDuration;
+
+  final bool showPositiveSign;
 
   /// The curve to apply when animating the value of this counter.
   final Curve curve;
@@ -112,6 +113,7 @@ class AnimatedFlipCounter extends StatelessWidget {
     required this.value,
     this.duration = const Duration(milliseconds: 300),
     this.negativeSignDuration = const Duration(milliseconds: 150),
+    this.showPositiveSign = false,
     this.curve = Curves.linear,
     this.textStyle,
     this.prefix,
@@ -246,6 +248,19 @@ class AnimatedFlipCounter extends StatelessWidget {
               ),
             ),
           ),
+
+          if (showPositiveSign)
+            ClipRect(
+              child: TweenAnimationBuilder(
+                duration: negativeSignDuration,
+                tween: Tween(end: value > 0 ? 1.0 : 0.0),
+                builder: (_, double v, __) => Center(
+                  widthFactor: v,
+                  child: Opacity(opacity: v, child: const Text('+')),
+                ),
+              ),
+            ),
+
           if (infix != null) Text(infix!),
           // Draw digits before the decimal point
           ...integerWidgets,
