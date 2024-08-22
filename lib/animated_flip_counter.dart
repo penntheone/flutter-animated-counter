@@ -19,6 +19,8 @@ class AnimatedFlipCounter extends StatelessWidget {
 
   final bool showPositiveSign;
 
+  final bool reverseOnNegativeAndHideZero;
+
   /// The curve to apply when animating the value of this counter.
   final Curve curve;
 
@@ -114,6 +116,7 @@ class AnimatedFlipCounter extends StatelessWidget {
     this.duration = const Duration(milliseconds: 300),
     this.negativeSignDuration = const Duration(milliseconds: 150),
     this.showPositiveSign = false,
+    this.reverseOnNegativeAndHideZero = false,
     this.curve = Curves.linear,
     this.textStyle,
     this.prefix,
@@ -193,6 +196,7 @@ class AnimatedFlipCounter extends StatelessWidget {
         // zero before decimal point is always visible.
         visible: hideLeadingZeroes ? digits[i] != 0 || i == digits.length - fractionDigits - 1 : true,
         animateVisible: animateVisible,
+        reverse: value < 0.0 && reverseOnNegativeAndHideZero,
       );
       integerWidgets.add(digit);
     }
@@ -227,7 +231,7 @@ class AnimatedFlipCounter extends StatelessWidget {
       }
     }
 
-    return DefaultTextStyle.merge(
+    Widget result = DefaultTextStyle.merge(
       style: style,
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -299,6 +303,22 @@ class AnimatedFlipCounter extends StatelessWidget {
         ],
       ),
     );
+
+    if (reverseOnNegativeAndHideZero) {
+      return ClipRect(
+        child: TweenAnimationBuilder(
+            duration: negativeSignDuration,
+            tween: Tween(end: value != 0 ? 1.0 : 0.0),
+            builder: (_, v, __) {
+              return Center(
+                widthFactor: v,
+                child: result,
+              );
+            }),
+      );
+    } else {
+      return result;
+    }
   }
 }
 
@@ -311,6 +331,7 @@ class _SingleDigitFlipCounter extends StatelessWidget {
   final EdgeInsets padding;
   final bool visible; // user can choose to hide elements
   final bool animateVisible;
+  final bool reverse;
 
   const _SingleDigitFlipCounter({
     super.key,
@@ -322,12 +343,15 @@ class _SingleDigitFlipCounter extends StatelessWidget {
     required this.padding,
     this.visible = true,
     this.animateVisible = false,
+    this.reverse = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final double w = size.width + padding.horizontal;
     final double h = size.height + padding.vertical;
+
+    final double reverseValue = reverse ? -1.0 : 1.0;
 
     Widget numberAnimationBuilder = TweenAnimationBuilder(
       tween: Tween(end: value),
@@ -340,12 +364,12 @@ class _SingleDigitFlipCounter extends StatelessWidget {
           children: <Widget>[
             _buildSingleDigit(
               digit: whole % 10,
-              offset: h * decimal,
+              offset: (h * decimal) * reverseValue,
               opacity: 1 - decimal,
             ),
             _buildSingleDigit(
               digit: (whole + 1) % 10,
-              offset: h * decimal - h,
+              offset: (h * decimal - h) * reverseValue,
               opacity: decimal,
             ),
           ],
